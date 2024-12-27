@@ -4,8 +4,9 @@ from sklearn.metrics import accuracy_score
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from Perceptron import create_neural_network
-from Dataset import create_dataset, divide_dataset
+from Models import (create_linear_model, create_convolutional_model,
+                    get_criterion, get_optimizer)
+from Dataset import create_dataset, divide_dataset, get_transform
 from Randomize_data import randomize_data
 
 # Тренировка модели
@@ -64,29 +65,7 @@ def predict_image(model, image_path, transform):
     return predicted.item()
 
 
-def main():
-    case = 'Lowercase'
-    # Создание датасета
-    transform, dataset, class_names = create_dataset(f"./{case}", 28)
-    # Деление датасета на обучающий и тестовый
-    train_dataset, test_dataset = divide_dataset(dataset)
-
-    # Загрузка датасетов
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
-
-    # Создание модели нейронной сети
-    model, criterion, optimizer = create_neural_network()
-
-    # Тренировка модели
-    train_model(model, criterion, optimizer, train_loader, num_epochs=300)
-
-    # Проверка точности модели
-    evaluate_model(model, test_loader)
-
-    # Рандомизация объектов
-    randomize_data(class_names, f'{case}')
-
+def show_predicts(case, transform, model, class_names):
     for class_name in class_names:
         figure, ax = plt.subplots(3, 4)
         for i in range(10):
@@ -95,11 +74,55 @@ def main():
             img = Image.open(image_path)
             img = img.resize((28, 28))
             ax[a, b].imshow(img, cmap="gray")
-            ax[a, b].set_title(
-                f'{class_name}\n'
-                f'{class_names[predict_image(model, image_path, transform)]}')
-
+            predicted_class = class_names[
+                predict_image(model, image_path, transform)
+            ]
+            is_true = class_name == predicted_class
+            ax[a, b].set_title(predicted_class,
+                               color='green' if is_true else 'red')
     plt.show()
+
+
+def main():
+    case = 'Lowercase'
+
+    # Создание модели линейной нейронной сети
+    model = create_linear_model(300)
+
+    # Создание модели сверточной нейронной сети
+    # model = create_convolutional_model(100, 3)
+
+    criterion = get_criterion()
+    optimizer = get_optimizer(model)
+
+    # Создание датасета
+    transform = get_transform(28, model.channels)
+    # dataset = create_dataset(f'./{case}', transform)
+    # class_names = dataset.classes
+    #
+    # # Деление датасета на обучающий и тестовый
+    # train_dataset, test_dataset = divide_dataset(dataset)
+
+    train_dataset = create_dataset(f"./{case}", transform)
+    test_dataset = create_dataset(f'./test_images/{case}', transform)
+    class_names = train_dataset.classes
+
+    # Загрузка датасетов
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+    # Тренировка модели
+    train_model(model, criterion, optimizer,
+                train_loader, num_epochs=model.epochs)
+
+    # Проверка точности модели
+    evaluate_model(model, test_loader)
+
+    # Рандомизация объектов
+    randomize_data(class_names, f'{case}')
+
+    # Показ предсказаний нейронной сети
+    show_predicts(case, transform, model, class_names)
 
 if __name__ == "__main__":
     main()
