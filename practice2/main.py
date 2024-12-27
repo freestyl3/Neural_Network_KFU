@@ -73,7 +73,7 @@ def show_predicts(case, transform, model, class_names):
             image_path = f"./test_images/{case}/{class_name}/{i}.jpg"
             img = Image.open(image_path)
             img = img.resize((28, 28))
-            ax[a, b].imshow(img, cmap="gray")
+            ax[a, b].imshow(img)
             predicted_class = class_names[
                 predict_image(model, image_path, transform)
             ]
